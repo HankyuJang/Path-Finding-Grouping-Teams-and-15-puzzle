@@ -106,6 +106,21 @@ def solve(initial_state):
                 s_best = s_prime
     return s_best, min_cost
 
+def solve_bf(initial_state):
+    fringe = [initial_state]
+    s_best = initial_state
+    min_cost = calculate_cost(initial_state)
+    while len(fringe) > 0:
+        s = fringe.pop()
+        s_cost = calculate_cost(s)
+        for s_prime in successor(s):
+            s_prime_cost = calculate_cost(s_prime)
+            fringe.append(s_prime)
+            if s_prime_cost < min_cost:
+                min_cost = s_prime_cost
+                s_best = s_prime
+    return s_best, min_cost
+
 def printable_result(s):
     return "\n".join([" ".join([member for member in team]) for team in s])
 
@@ -117,6 +132,12 @@ student_dict = readfile(filename)
 
 S0 = initial_state(student_dict)
 s_best, min_cost = solve(S0)
+print printable_result(s_best)
+print min_cost
+
+print("-"*40)
+print("Now checking using the bruteforce way\n")
+s_best, min_cost = solve_bf(S0)
 print printable_result(s_best)
 print min_cost
 
