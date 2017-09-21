@@ -4,9 +4,13 @@ Created on Wed Sep 20 17:31:29 2017
 
 @author: PulkitMaloo
 """
+# Assumption speed = 45 for missing or 0 values since majority of the
+# road segments have speed 45
 
+from __future__ import division
 import sys
 import numpy as np
+
 
 # ==============================================================================
 # The format of data is:
@@ -56,11 +60,7 @@ def reading_files():
         # from_city to to_city
         if 'to_city' not in data[seg[0]]:
             data[seg[0]]['to_city'] = dict()
-        try:
-            data[seg[0]]['to_city'][seg[1]] = {'dist': int(seg[2]), 'speed': int(seg[3]), 'highway': seg[4]}
-        except TypeError:
-            data[seg[0]]['to_city'][seg[1]] = {'dist': int(seg[2]), 'speed': seg[3], 'highway': seg[4]}
-        data[seg[0]]['to_city'][seg[1]]['time'] = int(seg[2])/int(seg[3]) if data[seg[0]]['to_city'][seg[1]]['speed'] else None
+        data[seg[0]]['to_city'][seg[1]] = {'dist': seg[2], 'speed': seg[3], 'highway': seg[4]}
 
         # to_city to from_city
         if seg[1] not in data:
@@ -71,21 +71,44 @@ def reading_files():
 
         if 'to_city' not in data[seg[1]]:
             data[seg[1]]['to_city'] = dict()
-        try:
-            data[seg[1]]['to_city'][seg[0]] = {'dist': int(seg[2]), 'speed': int(seg[3]), 'highway': seg[4]}
-        except TypeError:
-            data[seg[1]]['to_city'][seg[0]] = {'dist': int(seg[2]), 'speed': seg[3], 'highway': seg[4]}
-        data[seg[1]]['to_city'][seg[0]]['time'] = int(seg[2])/int(seg[3]) if data[seg[1]]['to_city'][seg[0]]['speed'] else None
+        data[seg[1]]['to_city'][seg[0]] = {'dist': seg[2], 'speed': seg[3], 'highway': seg[4]}
 
     f_city.close()
     f_road.close()
     return data
 
+def lat_lon_distance(from_city, to_city):
+#### This function is copied from ######################################
+# https://www.w3resource.com/python-exercises/math/python-math-exercise-27.php
+    from math import radians, sin, cos, acos
+    slat = radians(float(data[from_city]['latitude']))
+    slon = radians(float(data[from_city]['longitude']))
+    elat = radians(float(data[to_city]['latitude']))
+    elon = radians(float(data[to_city]['longitude']))
+    dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
+    return round(dist, 2)
+
+def distance(from_city, to_city):
+    # Handle distance = 0
+    dist = int(data[from_city]['to_city'][to_city]['dist'])
+    return dist if dist > 0 else lat_lon_distance(from_city, to_city)
+
+def speed(from_city, to_city):
+    # Handling speed = 0 or missing values by returning 45
+    try:
+        speed = int(data[from_city]['to_city'][to_city]['speed'])
+        return speed if speed > 0 else 45
+    except TypeError:
+        return 45
+
+def time(from_city, to_city):
+    return distance(from_city, to_city)/speed(from_city, to_city)
+
 def cost(current_city, next_city):
     if cost_function == 'distance':
-        return data[current_city]['to_city'][next_city]['dist']
+        return distance(current_city, next_city)
     elif cost_function == 'time':
-        return data[current_city]['to_city'][next_city]['time']
+        return time(current_city, next_city)
     else:
         return 1
 

@@ -8,7 +8,6 @@ Created on Sun Sep 17 14:55:59 2017
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import sys
 plt.style.use('ggplot')
 
 df_city = pd.read_table('city-gps.txt', sep=' ', names=['city', 'lat', 'lon'])
@@ -22,10 +21,3 @@ df_road['time'] = df_road.dist/df_road.speed
 df_road.drop_duplicates(inplace=True)
 #print(df_road[df_road.duplicated(keep=False)])
 #df_road[df_road.notnull()]         # No null values
-
-start_city = sys.argv[0]
-end_city = sys.argv[1]
-#routing_algorithm = sys.argv[2]
-#cost_function = sys.argv[3]
-
-solution = solve(start_city, end_city, routing_algorithm, cost_function)
