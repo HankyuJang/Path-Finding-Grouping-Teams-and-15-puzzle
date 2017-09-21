@@ -10,6 +10,7 @@ Created on Wed Sep 20 17:31:29 2017
 
 # Assumption 2
 # When speed=0 and distance=0 there is no route possible
+# Because the highway name is ferry, there's no road there
 
 from __future__ import division
 import sys
@@ -82,10 +83,10 @@ def reading_files():
             data[seg[1]]['to_city'] = dict()
         data[seg[1]]['to_city'][seg[0]] = {'dist': seg[2], 'speed': seg[3], 'highway': seg[4]}
 
-        #Delete this
-        if int(data[seg[1]]['to_city'][seg[0]]['dist'])==0:
-            import pandas as pd
-            print(data[seg[1]]['latitude'], data[seg[1]]['longitude'])
+        #### Delete this ########
+#        if int(data[seg[1]]['to_city'][seg[0]]['dist'])==0:
+#            import pandas as pd
+#            print(data[seg[1]]['latitude'], data[seg[1]]['longitude'])
 
     f_city.close()
     f_road.close()
@@ -101,9 +102,12 @@ def lat_lon_distance(from_city, to_city):
         elat = radians(float(data[to_city]['latitude']))
         elon = radians(float(data[to_city]['longitude']))
         dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
-        return round(dist, 2)
+        return dist
     except:
-        return
+        #### What to return here? #########
+        # If shortest path infinity would work
+        # If longest path
+        return float('inf')
 
 def distance(from_city, to_city):
     # Handle distance = 0
@@ -138,37 +142,64 @@ def successors(city):
 def solve(start_city):
     # Paths is is a list of path where each path can explored further
     paths = [[start_city]]
+    distance_of_paths = [0]
+    time_of_paths = [0]
+    segments_of_paths = [0]
+    costs_of_paths = [0]
     # List of the visited cities
     visited = []
     # While there are still paths to be explored
     while paths:
         # Retrieve a path according to BFS or DFS
+        # use pop(0) for BFS
         # use pop() for DFS
-        path = paths.pop(0)
+        astar = 0
+        i = 0 if routing_algorithm in ['bfs','uniform'] else -1 if routing_algorithm=='dfs' else astar
+        path = paths.pop(i)
+        curr_dist = distance_of_paths.pop(i)
+        curr_time = time_of_paths.pop(i)
+        curr_segments = segments_of_paths.pop(i)
+        curr_cost = costs_of_paths.pop(i)
         # Retreive the last city from the path to be expanded
-        curr = path[-1]
+        curr_city = path[-1]
         # For all cities that we can go from the current city
-        for next_city in successors(curr):
-            # And if the city is not already visited
+        for next_city in successors(curr_city):
+#==============================================================================
+#            print(path, curr_dist, curr_time, curr_cost)
+#==============================================================================
+            # And the next_city is already visited, evaluate the next successor
             if next_city in visited:
                 continue
+            # Updating path, distance, time, and segments
+            new_path = path + [next_city]
+            new_cost = curr_cost + cost(curr_city, next_city)
+            new_dist = curr_dist + distance(curr_city, next_city)
+            new_time = curr_time + time(curr_city, next_city)
+            new_segments = curr_segments + 1
             # Check if it's our goal state then return the path
             if is_goal(next_city):
-                return path + [next_city]
+                return [str(new_dist), str(new_time)] + new_path
             # Add this current city to our list of visited cities
             visited.append(next_city)
             # Add the new expanded path to our paths list
-            new_path = path + [next_city]
-            paths.append(new_path)
 
-    # What to output when no path is found
+            paths.append(new_path)
+            costs_of_paths.append(new_cost)
+            distance_of_paths.append(new_dist)
+            time_of_paths.append(new_time)
+            segments_of_paths.append(new_segments)
+
+    # What to output when no path is found?
     return False
 
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
 end_city = 'Indianapolis,_Indiana' #sys.argv[1]
 routing_algorithm = 'bfs' #sys.argv[2]
-cost_function = 'segments' #sys.argv[3]
+cost_function = 'time' #sys.argv[3]
 
 data = reading_files()
-print(' '.join(solve(start_city)))
+try:
+    print(' '.join(solve(start_city)))
+except TypeError:
+    print("No route found!")
