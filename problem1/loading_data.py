@@ -24,12 +24,12 @@ import numpy as np
 #   {
 #   city:
 #       {
-#           latitude: value
-#           longitude: value
-#           to_city:
+#           "latitude": value
+#           "longitude": value
+#           "to_city":
 #               {
-#                   name: {dist: value, speed: value, highway: value},
-#                   name: {..},
+#                   city: {"dist": value, "speed": value, "highway": value},
+#                   city: {..},
 #                   ...
 #               }
 #       }
@@ -83,36 +83,54 @@ def reading_files():
             data[seg[1]]['to_city'] = dict()
         data[seg[1]]['to_city'][seg[0]] = {'dist': seg[2], 'speed': seg[3], 'highway': seg[4]}
 
-        #### Delete this ########
-#        if int(data[seg[1]]['to_city'][seg[0]]['dist'])==0:
-#            import pandas as pd
-#            print(data[seg[1]]['latitude'], data[seg[1]]['longitude'])
+        # DElete
+        if seg[2]==None:
+            print(seg)
 
     f_city.close()
     f_road.close()
     return data
 
+def dist_nearest_city(city):
+    k = successors(city)
+    v = [distance(city, i) for i in k]
+    return k[v.index(min(v))]
+
+def dist_farthest_city(city):
+    k = successors(city)
+    v = [distance(city, i) for i in k]
+    return k[v.index(max(v))]
+
+def cost_nearest_city(city):
+    k = successors(city)
+    v = [cost(city, i) for i in k]
+    return k[v.index(min(v))]
+
+def latitude(city):
+    try:
+        return float(data[city]['latitude'])
+    except:
+        return float(data[dist_nearest_city(city)]['latitude'])
+
+def longitude(city):
+    try:
+        return float(data[city]['longitude'])
+    except:
+        return float(data[dist_nearest_city(city)]['longitude'])
+
 def lat_lon_distance(from_city, to_city):
 # This function is copied from the following website
 # https://www.w3resource.com/python-exercises/math/python-math-exercise-27.php
     from math import radians, sin, cos, acos
-    try:
-        slat = radians(float(data[from_city]['latitude']))
-        slon = radians(float(data[from_city]['longitude']))
-        elat = radians(float(data[to_city]['latitude']))
-        elon = radians(float(data[to_city]['longitude']))
-        dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
-        return dist
-    except:
-        #### What to return here? #########
-        # If shortest path infinity would work
-        # If longest path
-        return float('inf')
+    slat = radians(latitude(from_city))
+    slon = radians(longitude(from_city))
+    elat = radians(latitude(to_city))
+    elon = radians(longitude(to_city))
+    dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
+    return dist
 
 def distance(from_city, to_city):
-    # Handle distance = 0
-    dist = int(data[from_city]['to_city'][to_city]['dist'])
-    return dist if dist > 0 else lat_lon_distance(from_city, to_city)
+    return int(data[from_city]['to_city'][to_city]['dist'])
 
 def speed(from_city, to_city):
     # Handling speed = 0 or missing values by returning 45
@@ -148,20 +166,24 @@ def solve(start_city):
     costs_of_paths = [0]
     # List of the visited cities
     visited = []
+
     # While there are still paths to be explored
     while paths:
         # Retrieve a path according to BFS or DFS
         # use pop(0) for BFS
         # use pop() for DFS
-        astar = 0
-        i = 0 if routing_algorithm in ['bfs','uniform'] else -1 if routing_algorithm=='dfs' else astar
-        path = paths.pop(i)
+        # For switching between bfs dfs uniform astar
+        if routing_algorithm == 'bfs':
+            i = 0
+        if routing_algorithm == 'dfs':
+            i = -1
+        curr_path = paths.pop(i)
         curr_dist = distance_of_paths.pop(i)
         curr_time = time_of_paths.pop(i)
         curr_segments = segments_of_paths.pop(i)
         curr_cost = costs_of_paths.pop(i)
         # Retreive the last city from the path to be expanded
-        curr_city = path[-1]
+        curr_city = curr_path[-1]
         # For all cities that we can go from the current city
         for next_city in successors(curr_city):
 #==============================================================================
@@ -171,12 +193,13 @@ def solve(start_city):
             if next_city in visited:
                 continue
             # Updating path, distance, time, and segments
-            new_path = path + [next_city]
+            new_path = curr_path + [next_city]
             new_cost = curr_cost + cost(curr_city, next_city)
             new_dist = curr_dist + distance(curr_city, next_city)
             new_time = curr_time + time(curr_city, next_city)
             new_segments = curr_segments + 1
             # Check if it's our goal state then return the path
+            print(curr_path, curr_dist, curr_time, curr_cost)
             if is_goal(next_city):
                 return [str(new_dist), str(new_time)] + new_path
             # Add this current city to our list of visited cities
@@ -192,14 +215,60 @@ def solve(start_city):
     # What to output when no path is found?
     return False
 
+def solve2(start_city):
+    import heapq
+    # paths = [ ( [path], cost, distance, time ), (...), ... ]
+    paths = []
+    heapq.heappush(paths, (0, [start_city], 0, 0))
+    while paths:
+        print("heap", paths)
+        temp = heapq.heappop(paths)
+#        print("1",temp)
+        curr_path, curr_cost, curr_dist, curr_time = temp[1],  temp[0], temp[2], temp[3]
+        curr_city = curr_path[-1]
+
+        if is_goal(curr_city):
+            return [str(curr_dist), str(curr_time)] + curr_path
+
+        for next_city in successors(curr_city):
+            d_next_city = distance(curr_city, next_city)
+            t_next_city = time(curr_city, next_city)
+
+            new_path = curr_path + [next_city]
+            new_dist = curr_dist + d_next_city
+            new_time = curr_time + t_next_city
+#            print("p",curr_path, new_path)
+            g_next_city = curr_cost + cost(curr_city, next_city)
+            if routing_algorithm == 'uniform':
+                h_next_city = 0
+            elif routing_algorithm == 'astar':
+                h_next_city = lat_lon_distance(next_city, end_city)
+
+            f_new_cost = g_next_city + h_next_city
+
+            heapq.heappush(paths, (f_new_cost, new_path, new_dist, new_time))
+            print("2",paths)
+    # No route found
+    return False
+
+
+
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
 end_city = 'Indianapolis,_Indiana' #sys.argv[1]
-routing_algorithm = 'bfs' #sys.argv[2]
-cost_function = 'time' #sys.argv[3]
+routing_algorithm = 'uniform' #sys.argv[2]
+cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
+
+
 try:
-    print(' '.join(solve(start_city)))
+    if routing_algorithm in ['bfs', 'dfs']:
+        print(' '.join(solve(start_city)))
+    elif routing_algorithm in ['uniform', 'astar']:
+        print(' '.join(solve2(start_city)))
+    else:
+        print("Need extra credits")
 except TypeError:
     print("No route found!")
+

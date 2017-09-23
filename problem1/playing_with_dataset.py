@@ -21,3 +21,12 @@ df_road['time'] = df_road.dist/df_road.speed
 df_road.drop_duplicates(inplace=True)
 #print(df_road[df_road.duplicated(keep=False)])
 #df_road[df_road.notnull()]         # No null values
+
+
+####
+a = set(df_city.city.apply(lambda x: x.split(",")[1]).unique())
+b = set(df_road.from_city.apply(lambda x: x.split(",")[1]).unique())
+c = set(df_road.to_city.apply(lambda x: x.split(",")[1]).unique())
+a = a.union(b)
+a = a.union(c)
+print(len(a))
