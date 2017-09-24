@@ -166,6 +166,14 @@ def time_of_path(path):
 def segments_of_path(path):
     return len(path)-1
 
+def cost_of_path(path):
+    if cost_function == 'distance':
+        return distance_of_path(path)
+    elif cost_function == 'time':
+        return time_of_path(path)
+    else:
+        return segments_of_path(path)
+
 def is_goal(city):
     return city == end_city
 
@@ -180,10 +188,7 @@ def solve(start_city):
     # While there are still paths to be explored
     while fringe:
         # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
-        if routing_algorithm == 'bfs':
-            i = 0
-        if routing_algorithm == 'dfs':
-            i = -1
+        i = {'bfs':0, 'dfs':-1}[routing_algorithm]
         curr_path = fringe.pop(i)
         # Retreive the last city from the path to be expanded
         curr_city = curr_path[-1]
@@ -220,6 +225,7 @@ def solve(start_city):
 # 11.	    If s’ not in FRINGE, INSERT(s’, FRINGE)
 #==============================================================================
 
+
 def solve3(start_city):
     import heapq
     # fringe = [ ( cost, [path], distance, time ), (...), ... ]
@@ -227,11 +233,12 @@ def solve3(start_city):
     heapq.heappush(fringe, [0, [start_city]])
     closed = []
     while fringe:
-        print("heap", fringe)
+#        print("heap", fringe)
 #        s = REMOVE(FRINGE)
         s = heapq.heappop(fringe)
 #        print("1", s)
-        curr_path, curr_cost = s[1],  s[0]
+        curr_path = s[1]
+        curr_cost = cost_of_path(curr_path)
         curr_city = curr_path[-1]
 #        INSERT(s, CLOSED)
         closed.append(curr_city)
@@ -277,7 +284,7 @@ def solve3(start_city):
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
 end_city = 'Indianapolis,_Indiana' #sys.argv[1]
-routing_algorithm = 'bfs' #sys.argv[2]
+routing_algorithm = 'astar' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
@@ -285,14 +292,13 @@ data = reading_files()
 try:
     if routing_algorithm in ['bfs', 'dfs']:
         solution = solve(start_city)
-
     elif routing_algorithm in ['uniform', 'astar']:
-        solution = solve(start_city)
+        solution = solve3(start_city)
     else:
         print("Need extra credits")
     distance_of_solution = distance_of_path(solution)
     time_of_solution = time_of_path(solution)
-    solution_str = ' '.join(solve(start_city))
+    solution_str = ' '.join(solution)
     print(' '.join([str(distance_of_solution), str(time_of_solution), solution_str]))
 except TypeError:
     print("No route found!")
