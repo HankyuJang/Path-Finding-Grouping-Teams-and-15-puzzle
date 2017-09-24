@@ -35,8 +35,6 @@ import heapq
 #               }
 #       }
 #   }
-#
-# PS: The missing values are filled with None
 # ==============================================================================
 
 def reading_files():
@@ -55,7 +53,7 @@ def reading_files():
         if seg[0] == seg[1]:
             continue
 
-        # Handling Missing values of speed by returning 45
+        # Handling Missing speed values by returning 45
         if len(seg) != 5:
             seg = seg[:3] + [45] + seg[3:]
 
@@ -129,21 +127,26 @@ def lat_lon_distance(from_city, to_city):
     dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
     return dist
 
+# Returns distance between two cities
 def distance(from_city, to_city):
     return data[from_city]['to_city'][to_city]['distance']
 
+# Returns speed between two cities
 def speed(from_city, to_city):
     return data[from_city]['to_city'][to_city]['speed']
 
+# Returns tiem between two cities
 def time(from_city, to_city):
     return data[from_city]['to_city'][to_city]['time']
 
+#Returns cost between two cities according to the cost_function
 def cost(from_city, to_city):
     try:
         return data[from_city]['to_city'][to_city][cost_function]
     except:
         return 1
 
+# Returns distance of a path
 def distance_of_path(path):
     total_dist = 0
     for i in range(len(path)-1):
@@ -152,6 +155,7 @@ def distance_of_path(path):
         total_dist += distance(c1, c2)
     return total_dist
 
+# Returns time of a path
 def time_of_path(path):
     total_time = 0
     for i in range(len(path)-1):
@@ -160,9 +164,11 @@ def time_of_path(path):
         total_time += time(c1, c2)
     return round(total_time, 4)
 
+# Returns segments of a path
 def segments_of_path(path):
     return len(path)-1
 
+# Returns cost of a path according to the cost_function
 def cost_of_path(path):
     return eval(cost_function+"_of_path(path)")
 
@@ -203,7 +209,6 @@ def solve(start_city):
     # No route found
     return False
 
-
 #==============================================================================
 # 1. If GOAL?(initial-state) then return initial-state
 # 2. INSERT(initial-node, FRINGE)
@@ -217,8 +222,6 @@ def solve(start_city):
 # 10.     If s’ in FRINGE with larger s’, remove from FRINGE
 # 11.	    If s’ not in FRINGE, INSERT(s’, FRINGE)
 #==============================================================================
-
-
 def solve3(start_city):
     # fringe = [ ( cost, [path], distance, time, segments ), (...), ... ]
     fringe = []
@@ -229,7 +232,7 @@ def solve3(start_city):
 #        s = REMOVE(FRINGE)
         s = heapq.heappop(fringe)
 #        print("1", s)
-        curr_path, curr_cost, curr_dist, curr_time, curr_segments = s[1],  s[0], s[2], s[3], s[4]
+        curr_path, curr_cost, curr_dist, curr_time, curr_segments = s[1], s[0], s[2], s[3], s[4]
 
         if routing_algorithm == 'astar':
             if cost_function == 'distance':
@@ -290,8 +293,6 @@ def solve3(start_city):
 #            ax1.plot([latitude(curr_city), latitude(next_city)], [longitude(curr_city), longitude(next_city)], color=next(color))
 #            print([f_next_city, new_path])
             heapq.heappush(fringe, [f_next_city, new_path, new_dist, new_time, new_segments])
-
-
     # No route found
     return False
 
@@ -299,7 +300,7 @@ def solve3(start_city):
 ## check for start city == end city?
 
 start_city = 'Bloomington,_Indiana' #'Abbot_Village,_Maine' #sys.argv[0]
-end_city = 'Tampa,_Florida' #'Abbotsford,_Wisconsin' #sys.argv[1]
+end_city = 'Seattle,_Washington' #'Abbotsford,_Wisconsin' #sys.argv[1]
 routing_algorithm = 'uniform' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
