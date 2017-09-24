@@ -148,21 +148,11 @@ def cost(from_city, to_city):
 
 # Returns distance of a path
 def distance_of_path(path):
-    total_dist = 0
-    for i in range(len(path)-1):
-        c1 = path[i]
-        c2 = path[i+1]
-        total_dist += distance(c1, c2)
-    return total_dist
+    return sum([distance(path[i], path[i+1]) for i in range(len(path)-1)])
 
 # Returns time of a path
 def time_of_path(path):
-    total_time = 0
-    for i in range(len(path)-1):
-        c1 = path[i]
-        c2 = path[i+1]
-        total_time += time(c1, c2)
-    return round(total_time, 4)
+    return sum([time(path[i], path[i+1]) for i in range(len(path)-1)])
 
 # Returns segments of a path
 def segments_of_path(path):
