@@ -83,10 +83,6 @@ def reading_files():
             data[seg[1]]['to_city'] = dict()
         data[seg[1]]['to_city'][seg[0]] = {'dist': seg[2], 'speed': seg[3], 'highway': seg[4]}
 
-        # DElete
-        if seg[2]==None:
-            print(seg)
-
     f_city.close()
     f_road.close()
     return data
@@ -151,6 +147,25 @@ def cost(current_city, next_city):
     else:
         return 1
 
+def distance_of_path(path):
+    total_dist = 0
+    for i in range(len(path)-1):
+        c1 = path[i]
+        c2 = path[i+1]
+        total_dist += distance(c1, c2)
+    return total_dist
+
+def time_of_path(path):
+    total_time = 0
+    for i in range(len(path)-1):
+        c1 = path[i]
+        c2 = path[i+1]
+        total_time += time(c1, c2)
+    return round(total_time, 4)
+
+def segments_of_path(path):
+    return len(path)-1
+
 def is_goal(city):
     return city == end_city
 
@@ -158,117 +173,127 @@ def successors(city):
     return data[city]['to_city'].keys()
 
 def solve(start_city):
-    # Paths is is a list of path where each path can explored further
-    paths = [[start_city]]
-    distance_of_paths = [0]
-    time_of_paths = [0]
-    segments_of_paths = [0]
-    costs_of_paths = [0]
+    # fringe is is a list of path where each path can explored further
+    fringe = [[start_city]]
     # List of the visited cities
     visited = []
-
     # While there are still paths to be explored
-    while paths:
-        # Retrieve a path according to BFS or DFS
-        # use pop(0) for BFS
-        # use pop() for DFS
-        # For switching between bfs dfs uniform astar
+    while fringe:
+        # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
         if routing_algorithm == 'bfs':
             i = 0
         if routing_algorithm == 'dfs':
             i = -1
-        curr_path = paths.pop(i)
-        curr_dist = distance_of_paths.pop(i)
-        curr_time = time_of_paths.pop(i)
-        curr_segments = segments_of_paths.pop(i)
-        curr_cost = costs_of_paths.pop(i)
+        curr_path = fringe.pop(i)
         # Retreive the last city from the path to be expanded
         curr_city = curr_path[-1]
         # For all cities that we can go from the current city
         for next_city in successors(curr_city):
-#==============================================================================
-#            print(path, curr_dist, curr_time, curr_cost)
-#==============================================================================
-            # And the next_city is already visited, evaluate the next successor
+            # And if the next_city is already visited, discard
             if next_city in visited:
                 continue
-            # Updating path, distance, time, and segments
+            # Updating path
             new_path = curr_path + [next_city]
-            new_cost = curr_cost + cost(curr_city, next_city)
-            new_dist = curr_dist + distance(curr_city, next_city)
-            new_time = curr_time + time(curr_city, next_city)
-            new_segments = curr_segments + 1
             # Check if it's our goal state then return the path
-            print(curr_path, curr_dist, curr_time, curr_cost)
             if is_goal(next_city):
-                return [str(new_dist), str(new_time)] + new_path
+                return new_path
             # Add this current city to our list of visited cities
             visited.append(next_city)
             # Add the new expanded path to our paths list
+            fringe.append(new_path)
 
-            paths.append(new_path)
-            costs_of_paths.append(new_cost)
-            distance_of_paths.append(new_dist)
-            time_of_paths.append(new_time)
-            segments_of_paths.append(new_segments)
-
-    # What to output when no path is found?
-    return False
-
-def solve2(start_city):
-    import heapq
-    # paths = [ ( [path], cost, distance, time ), (...), ... ]
-    paths = []
-    heapq.heappush(paths, (0, [start_city], 0, 0))
-    while paths:
-        print("heap", paths)
-        temp = heapq.heappop(paths)
-#        print("1",temp)
-        curr_path, curr_cost, curr_dist, curr_time = temp[1],  temp[0], temp[2], temp[3]
-        curr_city = curr_path[-1]
-
-        if is_goal(curr_city):
-            return [str(curr_dist), str(curr_time)] + curr_path
-
-        for next_city in successors(curr_city):
-            d_next_city = distance(curr_city, next_city)
-            t_next_city = time(curr_city, next_city)
-
-            new_path = curr_path + [next_city]
-            new_dist = curr_dist + d_next_city
-            new_time = curr_time + t_next_city
-#            print("p",curr_path, new_path)
-            g_next_city = curr_cost + cost(curr_city, next_city)
-            if routing_algorithm == 'uniform':
-                h_next_city = 0
-            elif routing_algorithm == 'astar':
-                h_next_city = lat_lon_distance(next_city, end_city)
-
-            f_new_cost = g_next_city + h_next_city
-
-            heapq.heappush(paths, (f_new_cost, new_path, new_dist, new_time))
-            print("2",paths)
     # No route found
     return False
 
 
+#==============================================================================
+# 1. If GOAL?(initial-state) then return initial-state
+# 2. INSERT(initial-node, FRINGE)
+# 3. Repeat:
+# 4.   If empty(FRINGE) then return failure
+# 5.   s  REMOVE(FRINGE)
+# 6.   INSERT(s, CLOSED)
+# 7.   If GOAL?(s) then return s and/or path
+# 8.   For every state s’ in SUCC(s):
+# 9.       If s’ in CLOSED, discard s’
+# 10.     If s’ in FRINGE with larger s’, remove from FRINGE
+# 11.	    If s’ not in FRINGE, INSERT(s’, FRINGE)
+#==============================================================================
 
+def solve3(start_city):
+    import heapq
+    # fringe = [ ( cost, [path], distance, time ), (...), ... ]
+    fringe = []
+    heapq.heappush(fringe, [0, [start_city]])
+    closed = []
+    while fringe:
+        print("heap", fringe)
+#        s = REMOVE(FRINGE)
+        s = heapq.heappop(fringe)
+#        print("1", s)
+        curr_path, curr_cost = s[1],  s[0]
+        curr_city = curr_path[-1]
+#        INSERT(s, CLOSED)
+        closed.append(curr_city)
+#        If GOAL?(s) then return s and/or path
+        if is_goal(curr_city):
+            return curr_path
+
+        for next_city in successors(curr_city):
+#            If s’ in CLOSED, discard s’
+            if next_city in closed:
+                continue
+
+            new_path = curr_path + [next_city]
+#            print("p",curr_path, new_path)
+
+            # There is problem here curr_cost = g+h and we don't want h
+            g_next_city = curr_cost + cost(curr_city, next_city)
+            h_next_city = 0
+            if routing_algorithm == 'astar':
+                h_next_city += lat_lon_distance(next_city, end_city)
+
+            f_next_city = g_next_city + h_next_city
+
+#            If s’ in FRINGE with larger s’, remove from FRINGE
+            flag = False
+            for e in fringe:
+                if e[1] == new_path and e[0] > f_next_city:
+                    flag = True
+                    fringe.remove(e)
+                    heapq.heappush(fringe, [f_next_city, new_path])
+                    break
+
+#            If s’ not in FRINGE, INSERT(s’, FRINGE)
+            if flag == True:
+                continue
+            heapq.heappush(fringe, [f_next_city, new_path])
+
+    # No route found
+    return False
+
+
+## check for start city == end city?
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
 end_city = 'Indianapolis,_Indiana' #sys.argv[1]
-routing_algorithm = 'uniform' #sys.argv[2]
+routing_algorithm = 'bfs' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
 
-
 try:
     if routing_algorithm in ['bfs', 'dfs']:
-        print(' '.join(solve(start_city)))
+        solution = solve(start_city)
+
     elif routing_algorithm in ['uniform', 'astar']:
-        print(' '.join(solve2(start_city)))
+        solution = solve(start_city)
     else:
         print("Need extra credits")
+    distance_of_solution = distance_of_path(solution)
+    time_of_solution = time_of_path(solution)
+    solution_str = ' '.join(solve(start_city))
+    print(' '.join([str(distance_of_solution), str(time_of_solution), solution_str]))
 except TypeError:
     print("No route found!")
 
