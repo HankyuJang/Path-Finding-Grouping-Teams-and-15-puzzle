@@ -1,3 +1,4 @@
+# put your routing program here!
 # -*- coding: utf-8 -*-
 """
 Created on Wed Sep 20 17:31:29 2017
@@ -5,22 +6,22 @@ Created on Wed Sep 20 17:31:29 2017
 @author: PulkitMaloo
 """
 from __future__ import division
-#import sys
+import sys
 #import numpy as np
 import heapq
 radius_of_earth = 3959
 # Assumption 1
 # speed = 45 for missing or 0 values
 # since majority of the road segments seem to have speed 45
-speed_limit = 40
-
+speed_limit = 30
+max_speed = 65
+max_dist = 923
+heuristic_factor = 1
 # Assumption 2
 # When speed=0 and distance=0 there is no route possible
 # Because the highway name is ferry, there's no road there
-
 # =============================================================
 #   The format of data is:
-#
 # data =
 #   {
 #   city:
@@ -51,15 +52,15 @@ def reading_files():
         # One city has a route to itself
         if seg[0] == seg[1]:
             continue
-        # Handling Missing speed values by returning 45
+        # Updating missing speed values by a constant speed_limit
         if len(seg) != 5:
             seg = seg[:3] + [speed_limit] + seg[3:]
-        # Handling speed = 0
-        if int(seg[3]) == 0:
-            seg[3] = speed_limit
-        # Ferry cases where distance=0 and speed=0 (already fixed)
+        # Ferry cases where distance = 0 and speed = 0
         if int(seg[2])==0:
             continue
+        # Updating speed = 0
+        if int(seg[3]) == 0:
+            seg[3] = speed_limit
         # Some road segment are not in city-gps, they don't have lat or lon
         if seg[0] not in data:
             data[seg[0]] = {'latitude': None, 'longitude': None, 'visited': False, 'parent': None, 'cost': 0}
@@ -77,9 +78,21 @@ def reading_files():
     f_road.close()
     return data
 
+## Returns the farthest city from the current city
+#def dist_farthest_city(city):
+#    k = data[city]['to_city'].keys()
+#    v = [distance(city, i) for i in k]
+#    return k[v.index(max(v))]
+#
+## Returns the nearest city costwise from the current city
+#def cost_nearest_city(city):
+#    k = data[city]['to_city'].keys()
+#    v = [cost(city, i) for i in k]
+#    return k[v.index(min(v))]
+
 # Returns the nearest city and its distance from the current city which has latitude and longitude
 def dist_nearest_city(city):
-    nearest_cities = data[city]['to_city'].keys()
+    nearest_cities = successors(city)
     d = []
     for c in nearest_cities:
         if data[c]['latitude'] == None:
@@ -87,23 +100,7 @@ def dist_nearest_city(city):
         heapq.heappush(d, (distance(city, c), c))
     return heapq.heappop(d)
 
-# Returns the farthest city from the current city
-def dist_farthest_city(city):
-    k = data[city]['to_city'].keys()
-    v = [distance(city, i) for i in k]
-    return k[v.index(max(v))]
-
-# Returns the nearest city costwise from the current city
-def cost_nearest_city(city):
-    k = data[city]['to_city'].keys()
-    v = [cost(city, i) for i in k]
-    return k[v.index(min(v))]
-
 def lat_lon(city):
-    if data[city]['latitude'] == None:
-        # If city does not has a latitude longitude
-#        data[city]['latitude'], data[city]['longitude'] = lat_lon(dist_nearest_city(city)[1])
-        return lat_lon(dist_nearest_city(city)[1])
     return data[city]['latitude'], data[city]['longitude']
 
 # Heuristic function: calculates manhattan distance between two cities
@@ -117,16 +114,22 @@ def euclidean_distance(from_city, to_city):
     return dist
 
 def heuristic(city):
-	if cost_function == 'distance':
-		return euclidean_distance(city, end_city)
-	elif cost_function == 'time':
-		# time = dist/speed
-		# could take the const min speed cause it will never overestimate
-		return "time heuristic"
-	else:
-		# segment could be written as some heuristic of dist
-		return "Segment heuristic"
-
+    dist = 0
+    try:
+        if data[city]['latitude']:
+            dist = euclidean_distance(city, end_city)
+        else:
+            d, nearest_city = dist_nearest_city(city)
+            dist = heuristic(nearest_city) - d
+    except:
+        return 0
+    dist = dist*heuristic_factor
+    if cost_function == 'distance':
+        return dist
+    elif cost_function == 'time':
+        return dist/max_speed
+    else:
+        return dist/max_dist
 
 def distance(from_city, to_city):
     return data[from_city]['to_city'][to_city]['distance']
@@ -158,11 +161,24 @@ def path(city):
     while current != start_city:
         current_path.append(data[current]['parent'])
         current = data[current]['parent']
-    return distance_of_path(current_path[::-1]), time_of_path(current_path[::-1]), current_path[::-1]
+    return distance_of_path(current_path), time_of_path(current_path), current_path[::-1]
 
+def successors(city):
+    return data[city]['to_city'].keys()
+
+#===  SA #1   =================================================
+# 1. If GOAL?(initial-state) then return initial-state
+# 2. INSERT(initial-node, FRINGE)
+# 3. Repeat:
+# 4.  	If empty(FRINGE) then return failure
+# 5.		s  REMOVE(FRINGE)
+# 6.		For every state s’ in SUCC(s):
+# 7.			If GOAL?(s’) then return s’ and/or path
+# 8.       INSERT(s’, FRINGE)
+#==============================================================
 def solve(start_city):
     # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
-    i = {'bfs':0, 'dfs':-1}[routing_algorithm]
+    i = {'bfs': 0, 'dfs': -1}[routing_algorithm]
     # fringe is a list of cities which can explored further
     fringe = [start_city]
     data[start_city]['visited'] = True
@@ -199,7 +215,6 @@ def solve(start_city):
 def solve2(start_city):
     fringe = [[heuristic(start_city), start_city]]
     while fringe:
-#        print fringe, "\n"
         curr_city = heapq.heappop(fringe)[1]
         g_curr_cost = data[curr_city]['cost']
         if curr_city == end_city:
@@ -209,20 +224,18 @@ def solve2(start_city):
             h_next_city = heuristic(next_city)
             f_next_city = g_next_city + h_next_city
             if data[next_city]['parent']:
-                p = data[next_city]['parent']
-                if g_next_city > data[next_city]['cost']:
+                if g_next_city >= data[next_city]['cost']:
                     continue
                 else:
                     try:
                         fringe.remove([data[next_city]['cost'] + h_next_city, next_city])
                     except:
-                        print "except", ([data[next_city]['cost'] + h_next_city, next_city])
+                        pass
                     heapq.heapify(fringe)
             data[next_city]['parent'] = curr_city
             data[next_city]['cost'] = g_next_city
             heapq.heappush(fringe, [f_next_city, next_city])
     return False
-
 
 #==== SA #3   =================================================
 # 1. If GOAL?(initial-state) then return initial-state
@@ -240,19 +253,16 @@ def solve2(start_city):
 def solve3(start_city):
     fringe = [[0, start_city]]
     while fringe:
-#        print fringe, "\n"
         curr_city = heapq.heappop(fringe)[1]
         curr_cost = data[curr_city]['cost']
         data[curr_city]['visited'] = True
         if curr_city == end_city:
-            print "Goal Reached in", cost_function, curr_cost, '\n'
             return path(curr_city)
         for next_city in data[curr_city]['to_city']:
             if data[next_city]['visited']:
                 continue
             next_cost = curr_cost + cost(curr_city, next_city)
             if data[next_city]['parent']:
-                p = data[next_city]['parent']
                 if next_cost > data[next_city]['cost']:
                     continue
                 else:
@@ -263,11 +273,9 @@ def solve3(start_city):
             heapq.heappush(fringe, [next_cost, next_city])
     return False
 
-## check for start city == end city?
-
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
-end_city = 'Seattle,_Washington' #sys.argv[1]
-routing_algorithm = 'astar' #sys.argv[2]
+end_city = 'Indianapolis,_Indiana' #sys.argv[1]
+routing_algorithm = 'uniform' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
