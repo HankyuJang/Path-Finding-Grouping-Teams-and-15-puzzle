@@ -83,7 +83,6 @@ def reading_files():
             data[seg[1]]['to_city'] = dict()
         data[seg[1]]['to_city'][seg[0]] = {'distance':int(seg[2]), 'speed':int(seg[3]), 'time':int(seg[2])/int(seg[3]), 'segments':1, 'highway':seg[4]}
 
-
     f_city.close()
     f_road.close()
     return data
@@ -148,7 +147,6 @@ def speed(from_city, to_city):
 def time(from_city, to_city):
     return data[from_city]['to_city'][to_city]['time']
 
-#Returns cost between two cities according to the cost_function
 def cost(from_city, to_city, cost = cost_function):
         return data[from_city]['to_city'][to_city][cost]
 
@@ -223,9 +221,9 @@ def solve(start_city):
 # 10.     If s’ in FRINGE with larger s’, remove from FRINGE
 # 11.	    If s’ not in FRINGE, INSERT(s’, FRINGE)
 #==============================================================================
+
 def solve3(start_city):
-    fringe = []
-    heapq.heappush(fringe, [0, start_city])
+    fringe = [[0, start_city]]
     while fringe:
 #        print fringe, "\n"
         curr_city = heapq.heappop(fringe)[1]
@@ -245,6 +243,8 @@ def solve3(start_city):
                     continue
                 else:
                     data[next_city]['parent'] = curr_city
+                    fringe.remove([data[p]['cost'] + cost(p, next_city), next_city])
+                    heapq.heapify(fringe)
             else:
                 data[next_city]['parent'] = curr_city
             data[next_city]['cost'] = next_cost
@@ -254,19 +254,11 @@ def solve3(start_city):
 ## check for start city == end city?
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
-end_city = 'Chicago,_Illinois' #sys.argv[1]
+end_city = 'Seattle,_Washington' #sys.argv[1]
 routing_algorithm = 'uniform' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
-
-#import matplotlib.pyplot as plt
-#fig = plt.figure()
-#ax = fig.gca()
-#fig1 = plt.figure()
-#ax1 = fig1.gca()
-#ax1.scatter(latitude(start_city), longitude(start_city), color='y', s = 100)
-#ax1.scatter(latitude(end_city), longitude(end_city), color='g', s = 100)
 
 try:
     if routing_algorithm in ['bfs', 'dfs']:
@@ -278,15 +270,6 @@ try:
 
     print solution[0], round(solution[1], 3), ' '.join(solution[2])
 
-#    color1=iter(plt.cm.rainbow(np.linspace(0,1,len(solution))))
-#    color2=iter(plt.cm.rainbow(np.linspace(0,1,len(solution))))
-#    for i in range(len(solution)):
-#        city1 = solution[i]
-#        city2 = solution[i+1]
-#        ax.plot([latitude(city1), latitude(city2)], [longitude(city1), longitude(city2)], color=next(color1))
-#        ax.scatter(latitude(city1), longitude(city1), color=next(color2))
-#    ax.scatter(latitude(start_city), longitude(start_city), color='y', s = 100)
-#    ax.scatter(latitude(end_city), longitude(end_city), color='g', s = 100)
 
 except TypeError:
     print("No route found!")

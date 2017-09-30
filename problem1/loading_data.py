@@ -304,7 +304,7 @@ def solve3(start_city):
 
 ## check for start city == end city?
 
-start_city = 'Bloomington,_Indiana' #Bloomington,_Indiana' #'Abbot_Village,_Maine' #sys.argv[0]
+start_city = 'Bloomington,_Indiana' #'Abbot_Village,_Maine' #sys.argv[0]
 end_city = 'Seattle,_Washington' #'Abbotsford,_Wisconsin' #sys.argv[1]
 routing_algorithm = 'uniform' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
