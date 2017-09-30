@@ -4,19 +4,20 @@ Created on Wed Sep 20 17:31:29 2017
 
 @author: PulkitMaloo
 """
+from __future__ import division
+#import sys
+#import numpy as np
+import heapq
+
 # Assumption 1
 # speed = 45 for missing or 0 values
 # since majority of the road segments seem to have speed 45
+speed_limit = 30
 
 # Assumption 2
 # When speed=0 and distance=0 there is no route possible
 # Because the highway name is ferry, there's no road there
 
-from __future__ import division
-import sys
-import numpy as np
-import heapq
-#import matplotlib.pyplot as plt
 # ==============================================================================
 #   The format of data is:
 #
@@ -36,7 +37,6 @@ import heapq
 #       }
 #   }
 # ==============================================================================
-
 def reading_files():
     data = dict()
     f_city = open('city-gps.txt', 'r')
@@ -55,11 +55,11 @@ def reading_files():
 
         # Handling Missing speed values by returning 45
         if len(seg) != 5:
-            seg = seg[:3] + [45] + seg[3:]
+            seg = seg[:3] + [speed_limit] + seg[3:]
 
         # Handling speed = 0
         if int(seg[3]) == 0:
-            seg[3] = 45
+            seg[3] = speed_limit
 
         # Ferry cases where distance=0 and speed=0 (already fixed)
         if int(seg[2])==0:
@@ -87,21 +87,22 @@ def reading_files():
     f_road.close()
     return data
 
-def latitude(city):
+def lat_lon(city):
     if data[city]['latitude'] == None:
-        data[city]['latitude'] = data[dist_nearest_city(city)]['latitude']
-    return data[city]['latitude']
+        # If city does not has a latitude longitude
+#        data[city]['latitude'], data[city]['longitude'] = lat_lon(dist_nearest_city(city)[1])
+        return lat_lon(dist_nearest_city(city)[1])
+    return data[city]['latitude'], data[city]['longitude']
 
-def longitude(city):
-    if data[city]['longitude'] == None:
-        data[city]['longitude'] = data[dist_nearest_city(city)]['longitude']
-    return data[city]['longitude']
-
-# Returns the nearest city from the current city
+# Returns the nearest city and its distance from the current city which has latitude and longitude
 def dist_nearest_city(city):
-    k = successors(city)
-    v = [distance(city, i) for i in k]
-    return k[v.index(min(v))]
+    nearest_cities = successors(city)
+    d = []
+    for c in nearest_cities:
+        if data[c]['latitude'] == None:
+            continue
+        heapq.heappush(d, (distance(city, c), c))
+    return heapq.heappop(d)
 
 # Returns the farthest city from the current city
 def dist_farthest_city(city):
@@ -116,16 +117,28 @@ def cost_nearest_city(city):
     return k[v.index(min(v))]
 
 # Heuristic function: calculates manhattan distance between two cities
-def lat_lon_distance(from_city, to_city):
+def manhattan_distance(from_city, to_city):
 # This function is copied from the following website
 # https://www.w3resource.com/python-exercises/math/python-math-exercise-27.php
     from math import radians, sin, cos, acos
-    slat = radians(latitude(from_city))
-    slon = radians(longitude(from_city))
-    elat = radians(latitude(to_city))
-    elon = radians(longitude(to_city))
-    dist = 6371.01 * acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
+    slat, slon = map(radians, lat_lon(from_city))
+    elat, elon = map(radians, lat_lon(to_city))
+    x = 3949#6371.01
+
+    dist =  x* acos(sin(slat)*sin(elat) + cos(slat)*cos(elat)*cos(slon - elon))
     return dist
+
+def heuristic(city):
+	if cost_function == 'distance':
+		return manhattan_distance(city, end_city)
+	elif cost_function == 'time':
+		# time = dist/speed
+		# could take the const min speed cause it will never overestimate
+		return "time heuristic"
+	else:
+		# segment could be written as some heuristic of dist
+		return "Segment heuristic"
+
 
 # Returns distance between two cities
 def distance(from_city, to_city):
@@ -135,7 +148,7 @@ def distance(from_city, to_city):
 def speed(from_city, to_city):
     return data[from_city]['to_city'][to_city]['speed']
 
-# Returns tiem between two cities
+# Returns time between two cities
 def time(from_city, to_city):
     return data[from_city]['to_city'][to_city]['time']
 
@@ -188,9 +201,11 @@ def solve(start_city):
                 continue
             # Updating path
             new_path = curr_path + [next_city]
+#            new_dist = curr_dist + distance(curr_city, next_city)
+#            new_time = curr_time + time(curr_city, next_city)
             # Check if it's our goal state then return the path
             if is_goal(next_city):
-                return new_path
+                return new_path #[str(new_dist), str(new_time)] +
             # Add this current city to our list of visited cities
             data[next_city]['visited'] = True
             # Add the new expanded path to our paths list
@@ -262,11 +277,11 @@ def solve3(start_city):
 #            print(g_next_city)
             h_next_city = 0
             if routing_algorithm == 'astar':
-                h_next_city += lat_lon_distance(next_city, end_city)
-
+                h_next_city += heuristic(next_city)
             f_next_city = g_next_city + h_next_city
 
 #            If s’ in FRINGE with larger s’, remove from FRINGE
+#            heap_replace?
 #            flag = False
 #            for e in fringe:
 #                if e[1] == new_path and e[0] > f_next_city:
@@ -296,6 +311,7 @@ cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
 
+#import matplotlib.pyplot as plt
 #fig = plt.figure()
 #ax = fig.gca()
 #fig1 = plt.figure()
@@ -305,11 +321,13 @@ data = reading_files()
 
 try:
     if routing_algorithm in ['bfs', 'dfs']:
-        print(' '.join(solve(start_city)))
+        solution = solve(start_city)
     elif routing_algorithm in ['uniform', 'astar']:
-        print(' '.join(solve3(start_city)))
+        solution = solve3(start_city)
     else:
         print("Need extra credits")
+
+    print(' '.join(solution))
 
 #    color1=iter(plt.cm.rainbow(np.linspace(0,1,len(solution))))
 #    color2=iter(plt.cm.rainbow(np.linspace(0,1,len(solution))))

@@ -30,7 +30,7 @@
 ===============================================================================
 
 ===============================================================================
- The following cities are missing from the city-gps file, they don't have latitude and longitude
+ The following cities (938) are missing from the city-gps file, they don't have latitude and longitude
  Filled with None for now
     To do:
     fill it with the nearest city's latitude and longitude
