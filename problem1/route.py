@@ -121,6 +121,7 @@ def heuristic(city):
         else:
             d, nearest_city = dist_nearest_city(city)
             dist = heuristic(nearest_city) - d
+            dist = dist if dist > 0 else 0
     except:
         return 0
     dist = dist*heuristic_factor
@@ -176,7 +177,7 @@ def successors(city):
 # 7.			If GOAL?(s’) then return s’ and/or path
 # 8.       INSERT(s’, FRINGE)
 #==============================================================
-def solve(start_city):
+def solve1(start_city, end_city):
     # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
     i = {'bfs': 0, 'dfs': -1}[routing_algorithm]
     # fringe is a list of cities which can explored further
@@ -212,7 +213,7 @@ def solve(start_city):
 # 7.    For every state s’ in SUCC(s):
 # 8.		    INSERT(s’, FRINGE)
 #==============================================================
-def solve2(start_city):
+def solve2(start_city, end_city):
     fringe = [[heuristic(start_city), start_city]]
     while fringe:
         curr_city = heapq.heappop(fringe)[1]
@@ -250,7 +251,7 @@ def solve2(start_city):
 # 10.     If s’ in FRINGE with larger s’, remove from FRINGE
 # 11.	    If s’ not in FRINGE, INSERT(s’, FRINGE)
 #==============================================================
-def solve3(start_city):
+def solve3(start_city, end_city):
     fringe = [[0, start_city]]
     while fringe:
         curr_city = heapq.heappop(fringe)[1]
@@ -273,19 +274,49 @@ def solve3(start_city):
             heapq.heappush(fringe, [next_cost, next_city])
     return False
 
+def solve4(start_city, end_city):
+    fringe = [[-heuristic(start_city), start_city]]
+    while fringe:
+        curr_city = heapq.heappop(fringe)[1]
+        g_curr_cost = data[curr_city]['cost']
+        if curr_city == end_city:
+            return path(curr_city)
+        for next_city in data[curr_city]['to_city']:
+            g_next_city = g_curr_cost - cost(curr_city, next_city)
+            try:
+                h_next_city = -heuristic(next_city)
+            except:
+                h_next_city = 0
+            f_next_city = g_next_city + h_next_city
+            if data[next_city]['parent']:
+                if g_next_city < data[next_city]['cost']:
+                    continue
+                else:
+                    try:
+                        fringe.remove([data[next_city]['cost'] + h_next_city, next_city])
+                    except:
+                        pass
+                    heapq.heapify(fringe)
+            data[next_city]['parent'] = curr_city
+            data[next_city]['cost'] = g_next_city
+            heapq.heappush(fringe, [f_next_city, next_city])
+    return False
+
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
-end_city = 'Indianapolis,_Indiana' #sys.argv[1]
-routing_algorithm = 'uniform' #sys.argv[2]
+end_city = 'Seattle,_Washington' #sys.argv[1]
+routing_algorithm = 'longtour' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
 try:
     if routing_algorithm in ['bfs', 'dfs']:
-        solution = solve(start_city)
+        solution = solve1(start_city, end_city)
     elif routing_algorithm == 'uniform':
-        solution = solve3(start_city)
+        solution = solve3(start_city, end_city)
     elif routing_algorithm == 'astar':
-        solution = solve2(start_city)
+        solution = solve2(start_city, end_city)
+    elif routing_algorithm == 'longtour':
+        solution = solve4(start_city, end_city)
     else:
         print("Need extra credits")
     print solution[0], round(solution[1], 4), ' '.join(solution[2])
