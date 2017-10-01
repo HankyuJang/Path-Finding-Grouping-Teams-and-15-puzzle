@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # 
 # assign.py : Solve the student grouping problem
+#
 # (1)   
-# State space: Each team is represented in a list, a list containing the total teal, and a outer list containing all the possible formulation of teams.
+# State space: Each team is represented in a list, a list containing the total team, and a outer list containing all the possible formulation of teams.
+#
 # Successor function: Join two teams (Reduce one team by grouping the two teams)
 # 
 # S3 = [['kapadia'], ['chen464'], ['steflee', 'fan6'], ['zehzhang', 'djcran']]
@@ -15,18 +17,22 @@
 # [['kapadia'], ['zehzhang', 'djcran'], ['chen464', 'steflee', 'fan6']], 
 # [['kapadia'], ['steflee', 'fan6'], ['chen464', 'zehzhang', 'djcran']]]
 #
-# Edge weights: 0 (I didn't consider the time in formulating team in this problem)
+# Edge weights: 1 (One valid move is calculated as cost of 1)
+#
 # Goal state: A state with the minimum cost
+#
 # Heuristic function: X
 #
 # (2) How the search algorithm work
 #
-# For each step the algorithm branches, and then calculates the cost of each child node. If the cost is greater than it's parent, it doesn't push that child node in the fringe. As the algorithm proceed, it will search through the whole space if the child node is guaranteed to give a lower cost than its parent.
+# Start state would be all teams are in group of 1 person (working alone).
+# If there are 100 students in a class, there would be 100 individual groups.
+# The successor function merges two groups, so there would be 99 remaining groups.
+# For each step the algorithm branches, and then calculates the cost of each child node. If the cost is greater than it's parent, it doesn't push that child node in the fringe. As the algorithm proceed, it will keep branching until the child node is guaranteed to give a lower cost than its parent.
 #
 # (3) Any problem I faced, assumptions, simplifications, design decisions
 #
-# One assumption: I assumed that if the child node has higher cost, then in its subtree, it cannot have a team grouping that has lower cost than its parent.
-
+# Assumption: I assumed that if the child node has higher cost, then in its subtree, it cannot have a team grouping that has lower cost than its parent.
 
 import sys
 import copy

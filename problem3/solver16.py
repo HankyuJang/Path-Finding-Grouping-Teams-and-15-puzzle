@@ -1,6 +1,71 @@
 #!/usr/bin/env python
 # 
+# solver16.py : Solve the 16 puzzle problem - upto 3 tiles to move.
+#
+# (1)   
+# State space: All possible formulation of the tiles in 16 puzzle problem.
+# For example, a sample of the state look like this,
+# S0 = array([[ 2,  3,  0,  4],
+#             [ 1,  6,  7,  8],
+#             [ 5, 10, 11, 12],
+#             [ 9, 13, 14, 15]])
+#
+# Successor function: Possible position of the tiles after 1 move (either moving 1, 2, or 3 tiles at ones)
+# I marked the each successor function with its appropriate move with the 3 character notation.
+# 
+# >>> successor(S0)
+# [(array([[ 2,  3,  7,  4],
+#          [ 1,  6,  0,  8],
+#          [ 5, 10, 11, 12],
+#          [ 9, 13, 14, 15]]), 'U11'), 
+#  (array([[ 2,  3,  7,  4],
+#          [ 1,  6, 11,  8],
+#          [ 5, 10,  0, 12],
+#          [ 9, 13, 14, 15]]), 'U21'), 
+#  (array([[ 2,  3,  7,  4],
+#          [ 1,  6, 11,  8],
+#          [ 5, 10, 14, 12],
+#          [ 9, 13,  0, 15]]), 'U31'), 
+#  (array([[ 2,  0,  3,  4],
+#          [ 1,  6,  7,  8],
+#          [ 5, 10, 11, 12],
+#          [ 9, 13, 14, 15]]), 'R13'), 
+#  (array([[ 0,  2,  3,  4],
+#          [ 1,  6,  7,  8],
+#          [ 5, 10, 11, 12],
+#          [ 9, 13, 14, 15]]), 'R23'), 
+#  (array([[ 2,  3,  4,  0],
+#          [ 1,  6,  7,  8],
+#          [ 5, 10, 11, 12],
+#          [ 9, 13, 14, 15]]), 'L13')]
+# 
+# Edge weights: 1 (One valid move is calculated as cost of 1)
+#
+# Goal state: Following is the goal state
+#
+# array([[ 1,  2,  3,  4],
+#        [ 5,  6,  7,  8],
+#        [ 9, 10, 11, 12],
+#        [13, 14, 15,  0]])
 
+# Heuristic function: (Sum of Manhattan cost) / 3
+# 
+# If I use the sum of the Manhattan cost as in the notes, it would be not admissble due to the over-estimating.
+# I can move the tiles upto 3, which means that Dividing the sum of Manhattan cost by 3 won't over-estimate.
+# Hence, this huristic function is admissible.
+# Also, it is consistent, because it meets the triangle inequality.
+#
+# (2) How the search algorithm work
+#
+# When the search starts, the algorithm finds looks up for the successors that has the lowest heuristic value.
+# Then, for each step, the algorithm finds the state with the minimum heuristic value in the fringe, branching that node.
+# It keeps branching until it reaches the goal state.
+#
+# (3) Any problem I faced, assumptions, simplifications, design decisions
+#
+# The problem was straight forward, I didn't have to make any assumptions or simplifications.
+
+from __future__ import division
 import sys
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -92,7 +157,6 @@ def solve(initial_board):
             else:
                 puzzle_tracking[to_str(s_prime)] = puzzle_tracking[to_str(s)] + [move]
             if is_goal(s_prime):
-                print n_steps
                 return(puzzle_tracking[to_str(s_prime)])
             fringe.append([heuristic(s_prime, G), s_prime])
     return False
