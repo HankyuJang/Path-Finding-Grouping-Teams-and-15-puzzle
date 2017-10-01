@@ -57,13 +57,12 @@
 #
 # (2) How the search algorithm work
 #
-# When the search starts, the algorithm finds looks up for the successors that has the lowest heuristic value.
-# Then, for each step, the algorithm finds the state with the minimum heuristic value in the fringe, branching that node.
-# It keeps branching until it reaches the goal state.
+# For each step, the algorithm chooses to branch the node with the minimum f value, which is (heuristic + cost). It keeps branching until it reaches the goal state.
 #
 # (3) Any problem I faced, assumptions, simplifications, design decisions
 #
-# The problem was straight forward, I didn't have to make any assumptions or simplifications.
+# I didn't make any assumptions or simplifications. 
+#
 
 from __future__ import division
 import sys
@@ -136,42 +135,29 @@ def is_goal(s):
 def heuristic(s1, s2):
     return manhattan_distance(s1, s2)
 
+# f = heuristic + cost so far
 def find_best_state(fringe):
-    heuristic_values = [s[0] for s in fringe]
-    return heuristic_values.index(min(heuristic_values))
+    f_list = [s[0] + len(s[1]) for s in fringe]
+    return f_list.index(min(f_list))
 
 def solve(initial_board):
     global puzzle_tracking
-    fringe = [[heuristic(initial_board, G), initial_board]]
-    n_steps = 0
+    fringe = [[heuristic(initial_board, G), [], initial_board]]
     while len(fringe) > 0:
         # pop the tile with minimum value heuristic
-        _, s = fringe.pop(find_best_state(fringe))
+        _, move_upto, s = fringe.pop(find_best_state(fringe))
         # _, s = fringe.pop(0) # this is using BFS
-        n_steps += 1
         for s_prime, move in successor(s):
-            if to_str(s_prime) in puzzle_tracking:
-                if len(move) < len(puzzle_tracking[to_str(s_prime)]):
-                    puzzle_tracking[to_str(s_prime)] = move
-                continue
-            else:
-                puzzle_tracking[to_str(s_prime)] = puzzle_tracking[to_str(s)] + [move]
             if is_goal(s_prime):
-                return(puzzle_tracking[to_str(s_prime)])
-            fringe.append([heuristic(s_prime, G), s_prime])
+                return (fringe, s_prime, move_upto+[move])
+            fringe.append([heuristic(s_prime, G), move_upto+[move], s_prime])
     return False
 
-# This is to use each state as the key of the dictionary to keep track of the moves
-def to_str(s):
-    return ''.join(str(elem) for inner in s for elem in inner)
-
 def printable_result(path):
-    # return " ".join([member for member in team])
     return " ".join(path)
 
 filename = sys.argv[1]
 S0 = initial_state(filename)
-puzzle_tracking = {to_str(S0): []}
 
-path = solve(S0)
+fringe, s_prime, path = solve(S0)
 print printable_result(path)
