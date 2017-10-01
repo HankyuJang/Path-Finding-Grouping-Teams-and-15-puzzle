@@ -304,7 +304,7 @@ def solve4(start_city, end_city):
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
 end_city = 'Seattle,_Washington' #sys.argv[1]
-routing_algorithm = 'longtour' #sys.argv[2]
+routing_algorithm = 'uniform' #sys.argv[2]
 cost_function = 'distance' #sys.argv[3]
 
 data = reading_files()
@@ -318,7 +318,7 @@ try:
     elif routing_algorithm == 'longtour':
         solution = solve4(start_city, end_city)
     else:
-        print("Need extra credits")
+        print("Implement statetour")
     print solution[0], round(solution[1], 4), ' '.join(solution[2])
 except TypeError:
     print("No route found!")
