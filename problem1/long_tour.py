@@ -13,7 +13,7 @@ radius_of_earth = 3959
 # Assumption 1
 # speed = 45 for missing or 0 values
 # since majority of the road segments seem to have speed 45
-speed_limit = 30
+speed_limit = 45
 max_speed = 65
 max_dist = 923
 heuristic_factor = 1
@@ -309,7 +309,7 @@ def long_heuristic(city):
 #==============================================================================
 
 def solve4(start_city, end_city):
-    fringe = [[heuristic(start_city), start_city]]
+    fringe = [[-heuristic(start_city), start_city]]
     while fringe:
         curr_city = heapq.heappop(fringe)[1]
         g_curr_cost = data[curr_city]['cost']
@@ -318,9 +318,9 @@ def solve4(start_city, end_city):
         for next_city in data[curr_city]['to_city']:
             g_next_city = g_curr_cost + long_cost(curr_city, next_city)
             try:
-                h_next_city = 1000000*(1/heuristic(next_city))
+                h_next_city = -heuristic(next_city)
             except:
-                h_next_city = 1000
+                h_next_city = 0
             f_next_city = g_next_city + h_next_city
             if data[next_city]['parent']:
                 if g_next_city < data[next_city]['cost']:
@@ -333,13 +333,14 @@ def solve4(start_city, end_city):
                     heapq.heapify(fringe)
             data[next_city]['parent'] = curr_city
             data[next_city]['cost'] = g_next_city
+            # print next_city
             heapq.heappush(fringe, [f_next_city, next_city])
     return False
 
 start_city = 'Bloomington,_Indiana' #sys.argv[0]
-end_city = 'Indianapolis,_Indiana' #sys.argv[1]
+end_city = 'Seattle,_Washington' #sys.argv[1]
 routing_algorithm = 'longtour' #sys.argv[2]
-cost_function = 'distance' #sys.argv[3]
+cost_function = 'time' #sys.argv[3]
 
 data = reading_files()
 try:
