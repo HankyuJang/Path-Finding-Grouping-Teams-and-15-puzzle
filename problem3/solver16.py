@@ -12,32 +12,35 @@
 #
 # Successor function: Possible position of the tiles after 1 move (either moving 1, 2, or 3 tiles at ones)
 # I marked the each successor function with its appropriate move with the 3 character notation.
+#
+# The successor gets in the input of current state and the move up to the state.
+# Then it returns list of all the possible next states paired with moves taken upto that state, heuristic, and the cost.
 # 
-# >>> successor(S0)
-# [(array([[ 2,  3,  7,  4],
-#          [ 1,  6,  0,  8],
-#          [ 5, 10, 11, 12],
-#          [ 9, 13, 14, 15]]), 'U11'), 
-#  (array([[ 2,  3,  7,  4],
-#          [ 1,  6, 11,  8],
-#          [ 5, 10,  0, 12],
-#          [ 9, 13, 14, 15]]), 'U21'), 
-#  (array([[ 2,  3,  7,  4],
-#          [ 1,  6, 11,  8],
-#          [ 5, 10, 14, 12],
-#          [ 9, 13,  0, 15]]), 'U31'), 
-#  (array([[ 2,  0,  3,  4],
-#          [ 1,  6,  7,  8],
-#          [ 5, 10, 11, 12],
-#          [ 9, 13, 14, 15]]), 'R13'), 
-#  (array([[ 0,  2,  3,  4],
-#          [ 1,  6,  7,  8],
-#          [ 5, 10, 11, 12],
-#          [ 9, 13, 14, 15]]), 'R23'), 
-#  (array([[ 2,  3,  4,  0],
-#          [ 1,  6,  7,  8],
-#          [ 5, 10, 11, 12],
-#          [ 9, 13, 14, 15]]), 'L13')]
+# >>> successor(S0, [])
+# [[array([[ 1,  2,  3,  4],
+        # [ 5,  6,  7,  8],
+        # [ 9, 10,  0, 12],
+        # [13, 14, 11, 15]]), ['D14'], 1.3333333333333333, 2.333333333333333], 
+# [array([[ 1,  2,  3,  4],
+        # [ 5,  6,  0,  8],
+        # [ 9, 10,  7, 12],
+        # [13, 14, 11, 15]]), ['D24'], 2.0, 3.0], 
+# [array([[ 1,  2,  0,  4],
+        # [ 5,  6,  3,  8],
+        # [ 9, 10,  7, 12],
+        # [13, 14, 11, 15]]), ['D34'], 2.6666666666666665, 3.6666666666666665], 
+# [array([[ 1,  2,  3,  4],
+        # [ 5,  6,  7,  8],
+        # [ 9, 10, 11, 12],
+        # [13,  0, 14, 15]]), ['R13'], 1.3333333333333333, 2.333333333333333], 
+# [array([[ 1,  2,  3,  4],
+        # [ 5,  6,  7,  8],
+        # [ 9, 10, 11, 12],
+        # [ 0, 13, 14, 15]]), ['R23'], 2.0, 3.0], 
+# [array([[ 1,  2,  3,  4],
+        # [ 5,  6,  7,  8],
+        # [ 9, 10, 11, 12],
+        # [13, 14, 15,  0]]), ['L13'], 0.0, 1.0]]
 # 
 # Edge weights: 1 (One valid move is calculated as cost of 1)
 #
@@ -57,11 +60,36 @@
 #
 # (2) How the search algorithm work
 #
-# For each step, the algorithm chooses to branch the node with the minimum f value, which is (heuristic + cost). It keeps branching until it reaches the goal state.
+# For each step, the algorithm chooses to branch the node with the minimum f value, which is (heuristic + cost). The algorithm also keeps track of the revisited states. In the successor function, if the child state is previously visited, then it doesn't return the visited child state. It keeps branching until it reaches the goal state.
 #
 # (3) Any problem I faced, assumptions, simplifications, design decisions
 #
-# I didn't make any assumptions or simplifications. 
+# The heuristic function I am using is admissble, hence it would be complete and optimal. 
+# However, when the input board gets very complicated, the power of the heuristics to find the goal state tend to get weaker.
+# I found that instead of using the admissible heuristic, if I used a heuristic with sum of Manhattan distance without dividing it by 3, 
+# the performance got much better. Here is the comparison of the two heuristics.
+#
+# < Heuristic: sum of Manhattan distance divided by 3 >
+#
+# [hankjang@silo problem3]$ time python solver16.py input_board10.txt
+# D14 R24 U13 L22 D24 R14 D12 R23 U31 L31
+
+# real    0m22.801s
+# user    0m22.755s
+# sys     0m0.030s
+#
+# < Heuristic: sum of Manhattan distance (not dividing by 3)>
+#
+# [hankjang@silo problem3]$ time python solver16.py input_board10.txt
+# D14 R24 U13 L22 D24 R14 D12 R23 U31 L31
+
+# real    0m0.587s
+# user    0m0.558s
+# sys     0m0.026s
+# 
+# The difference in performance was stable for over 10 different input boards I tested.
+# However, since the heuristic of using sum of Manhattan distance (not dividing by 3) is not admissible,
+# I decided to stick with the slower, but admissible heuristic.
 #
 
 from __future__ import division
@@ -96,7 +124,7 @@ def swap(s, r1, c1, r2, c2):
     s[r1,c1] = s[r2,c2]
     s[r2,c2] = temp
 
-def successor(s):
+def successor(s, cur_m):
     successor_list = []
     # Get the index of the blank tile
     row, col = np.where(s==0)
@@ -125,7 +153,15 @@ def successor(s):
             for i in range(n):
                 swap(s_next,row,col,row,col+1)
                 col += 1
-        successor_list.append((s_next, move))
+        
+        # Don't add the child if it's already checked
+        if any((s_next == s).all() for s in puzzle_tracking):
+            continue
+
+        h = heuristic(s_next, G)
+        m = cur_m + [move]
+        c = h + len(m)
+        successor_list.append([s_next, m, h, c])
 
     return successor_list
     
@@ -134,23 +170,25 @@ def is_goal(s):
 
 def heuristic(s1, s2):
     return manhattan_distance(s1, s2)
+    # return number_of_misplaced_tiles(s1, s2)
 
 # f = heuristic + cost so far
 def find_best_state(fringe):
-    f_list = [s[0] + len(s[1]) for s in fringe]
+    f_list = [s[3] for s in fringe]
     return f_list.index(min(f_list))
 
 def solve(initial_board):
     global puzzle_tracking
-    fringe = [[heuristic(initial_board, G), [], initial_board]]
+    h = heuristic(initial_board, G)
+    fringe = [[initial_board, [], h, h]]
+
     while len(fringe) > 0:
-        # pop the tile with minimum value heuristic
-        _, move_upto, s = fringe.pop(find_best_state(fringe))
-        # _, s = fringe.pop(0) # this is using BFS
-        for s_prime, move in successor(s):
-            if is_goal(s_prime):
-                return (fringe, s_prime, move_upto+[move])
-            fringe.append([heuristic(s_prime, G), move_upto+[move], s_prime])
+        s, m, _, c = fringe.pop(find_best_state(fringe))
+        puzzle_tracking.append(s)
+        if is_goal(s):
+            return fringe, m  
+
+        fringe.extend(successor(s, m))
     return False
 
 def printable_result(path):
@@ -158,6 +196,7 @@ def printable_result(path):
 
 filename = sys.argv[1]
 S0 = initial_state(filename)
+puzzle_tracking = []
 
-fringe, s_prime, path = solve(S0)
+fringe, path = solve(S0)
 print printable_result(path)
