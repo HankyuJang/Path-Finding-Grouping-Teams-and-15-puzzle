@@ -1,10 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
+"""
+Created on Wed Sep 20 17:31:29 2017
+@author: PulkitMaloo
+"""
 #==============================================================================
 # route.py : Solve the routing problem
 #
+# Abstraction:
+#    Initial State: start_city
+#    Goal State: end_city
+#    Successor: returns all the cities that are connected to the current city
+#    State space: all the cities
+#    Cost Function: cost_function
+#    Heuristic: Great circle distance
+#
 # (1) Uniform Cost Search seems to work best for finding a route between two cities.
+#       It is computationally faster for finding the optimal route than astar
+#       and bfs, dfs doesn't gurantees to find the optimal route
 #
 # (2) For example:
 #     1. start_city = San_Jose,_California
@@ -20,20 +33,34 @@
 #                         uniform = 55.244 ms
 #                         astar = 100.631 ms
 #
-#     The above experiments clearly illustrate that Depth First Search is the
-#        fastest in terms of the amount of computation time required
-#     Depth first search is around 10-20 times faster than astar on an average case,
-#        but the factor totally depends on the start_city and end_city
-#        and so its hard to generalize
+#  The above experiments clearly illustrate that Depth First Search is the
+#  fastest in terms of the amount of computation time required
+#  Depth first search is around 10-20 times faster than astar on an average case, but
+#  the factor totally depends on the start_city and end_city and so its hard to generalize
 #
 # (3)
-# (4) The heuristic function calculates the great circle distance between two latitude
+#
+#
+# (4) The heuristic function calculates the great circle distance between the
+# current city and end_city given it has the latitude and longitude of both the cities
+# If the latitude, longitude is missing of the current city then it returns
+# the heuristic of nearest city(which has a latitude, longitude) - cost to the nearest city
+# If the nearest city is the goal state then dist will become negative so it will simply return 0
+# If none of the adjacent cities to the current city have latitude or longitude then heuristic is 0
+# I've also taken the assumption that end_city will not be a Junction(which are missing lat lon) and in that case the heuristic will return 0
+# If the cost_function is distance the heuristic returns the distance calculated
+# If the cost_function is time the heuristic returns distance/max_speed
+# If the cost_function is segments the heuristic returns distance/max_distance
+#
+# The heuristic which calculates the great circle distance should ideally be consistent
+# However, Due to the anomalies in the dataset(missing lat lon values, anomalous distance values and many more)
+# the heuristic in this case is guaranteed to be admissable, but cannot say about consistent because of so many anomalies in the dataset
+# If the heuristic returns 0 then it won't be consistent
+#
+# The heuristic can be imporved by doing
 #==============================================================================
 
-"""
-Created on Wed Sep 20 17:31:29 2017
-@author: PulkitMaloo
-"""
+
 from __future__ import division
 import sys
 import heapq
@@ -41,12 +68,13 @@ import heapq
 radius_of_earth = 3959
 
 # Assumption 1
+# Speed limit of highways, which have missing speed limit
+s = {'NS_106' : 62, 'NB_11': 50, 'NB_8': 50, 'NS_103': 50}
 # speed = 45 for missing or 0 values
 # since majority of the road segments seem to have speed 45
 speed_limit = 45
-s = {'NS_106' : 62, 'NB_11': 50, 'NB_8': 50, 'NS_103': 50}
 max_speed = 65
-max_dist = 923
+max_distance = 923
 heuristic_factor = 1
 # Assumption 2
 # When speed=0 and distance=0 there is no route possible
@@ -140,6 +168,7 @@ def heuristic(city):
         if data[city]['latitude']:
             dist = great_circle_distance(city, end_city)
         else:
+#            If city's latitude longitude is missing
             d, nearest_city = dist_nearest_city(city)
             dist = heuristic(nearest_city) - d
             dist = dist if dist > 0 else 0
@@ -151,7 +180,7 @@ def heuristic(city):
     elif cost_function == 'time':
         return dist/max_speed
     else:
-        return dist/max_dist
+        return dist/max_distance
 
 def distance(from_city, to_city):
     return data[from_city]['to_city'][to_city]['distance']
@@ -188,16 +217,6 @@ def path(city):
 def successors(city):
     return data[city]['to_city'].keys()
 
-#===  SA #1   =================================================
-# 1. If GOAL?(initial-state) then return initial-state
-# 2. INSERT(initial-node, FRINGE)
-# 3. Repeat:
-# 4.  	If empty(FRINGE) then return failure
-# 5.		s  REMOVE(FRINGE)
-# 6.		For every state s’ in SUCC(s):
-# 7.			If GOAL?(s’) then return s’ and/or path
-# 8.       INSERT(s’, FRINGE)
-#==============================================================
 def solve1(start_city, end_city):
     # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
     i = {'bfs': 0, 'dfs': -1}[routing_algorithm]
@@ -325,7 +344,7 @@ def solve4(start_city, end_city):
 
 #start_city = 'Bloomington,_Indiana'
 #end_city = 'Indianapolis,_Indiana'
-#routing_algorithm = 'astar'
+#routing_algorithm = 'uniform'
 #cost_function = 'distance'
 
 start_city = sys.argv[1]
@@ -348,8 +367,16 @@ try:
     else:
         print("Implement statetour")
     e = timeit.default_timer()
-    print solution[0], round(solution[1], 4), ' '.join(solution[2])
 #    print e-s
+    for i in range(len(solution[2])-1):
+        c1 = solution[2][i]
+        c2 = solution[2][i+1]
+        d = data[c1]['to_city'][c2]['distance']
+        t = int(data[c1]['to_city'][c2]['time']*60)
+        h = data[c1]['to_city'][c2]['highway']
+        print "Travel via", h, "from", c1, "to", c2, "for", t, "minutes", "(", d, "miles )"
+    print solution[0], solution[1] , ' '.join(solution[2])
+
 except TypeError:
     print("No route found!")
 
