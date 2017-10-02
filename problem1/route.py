@@ -1,19 +1,50 @@
-# put your routing program here!
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+#==============================================================================
+# route.py : Solve the routing problem
+#
+# (1) Uniform Cost Search seems to work best for finding a route between two cities.
+#
+# (2) For example:
+#     1. start_city = San_Jose,_California
+#        end_city = Miami,_Florida
+#        Time taken by    dfs = 9.339 ms
+#                         bfs = 11.122 ms
+#                         uniform = 41.419 ms
+#                         astar = 64.850 ms
+#     2. start_city = Bloomington,_Indiana
+#        end_city = Seattle,_Washington
+#        Time taken by    dfs = 5.203 ms
+#                         bfs = 11.052 ms
+#                         uniform = 55.244 ms
+#                         astar = 100.631 ms
+#
+#     The above experiments clearly illustrate that Depth First Search is the
+#        fastest in terms of the amount of computation time required
+#     Depth first search is around 10-20 times faster than astar on an average case,
+#        but the factor totally depends on the start_city and end_city
+#        and so its hard to generalize
+#
+# (3)
+# (4) The heuristic function calculates the great circle distance between two latitude
+#==============================================================================
+
 """
 Created on Wed Sep 20 17:31:29 2017
-
 @author: PulkitMaloo
 """
 from __future__ import division
 import sys
-#import numpy as np
 import heapq
+
 radius_of_earth = 3959
+
 # Assumption 1
 # speed = 45 for missing or 0 values
 # since majority of the road segments seem to have speed 45
-speed_limit = 30
+speed_limit = 45
+s = {'NS_106' : 62, 'NB_11': 50, 'NB_8': 50, 'NS_103': 50}
 max_speed = 65
 max_dist = 923
 heuristic_factor = 1
@@ -53,8 +84,12 @@ def reading_files():
         if seg[0] == seg[1]:
             continue
         # Updating missing speed values by a constant speed_limit
+        # or by their highway speeds
         if len(seg) != 5:
-            seg = seg[:3] + [speed_limit] + seg[3:]
+            if seg[-1] in s:
+                seg = seg[:3] + [s[seg[-1]]] + seg[3:]
+            else:
+                seg = seg[:3] + [speed_limit] + seg[3:]
         # Ferry cases where distance = 0 and speed = 0
         if int(seg[2])==0:
             continue
@@ -78,18 +113,6 @@ def reading_files():
     f_road.close()
     return data
 
-## Returns the farthest city from the current city
-#def dist_farthest_city(city):
-#    k = data[city]['to_city'].keys()
-#    v = [distance(city, i) for i in k]
-#    return k[v.index(max(v))]
-#
-## Returns the nearest city costwise from the current city
-#def cost_nearest_city(city):
-#    k = data[city]['to_city'].keys()
-#    v = [cost(city, i) for i in k]
-#    return k[v.index(min(v))]
-
 # Returns the nearest city and its distance from the current city which has latitude and longitude
 def dist_nearest_city(city):
     nearest_cities = successors(city)
@@ -103,10 +126,8 @@ def dist_nearest_city(city):
 def lat_lon(city):
     return data[city]['latitude'], data[city]['longitude']
 
-# Heuristic function: calculates manhattan distance between two cities
-def euclidean_distance(from_city, to_city):
-# This function is copied from the following website
-# https://www.w3resource.com/python-exercises/math/python-math-exercise-27.php
+#
+def great_circle_distance(from_city, to_city):
     from math import radians, sin, cos, acos
     slat, slon = map(radians, lat_lon(from_city))
     elat, elon = map(radians, lat_lon(to_city))
@@ -117,7 +138,7 @@ def heuristic(city):
     dist = 0
     try:
         if data[city]['latitude']:
-            dist = euclidean_distance(city, end_city)
+            dist = great_circle_distance(city, end_city)
         else:
             d, nearest_city = dist_nearest_city(city)
             dist = heuristic(nearest_city) - d
@@ -225,14 +246,14 @@ def solve2(start_city, end_city):
             h_next_city = heuristic(next_city)
             f_next_city = g_next_city + h_next_city
             if data[next_city]['parent']:
-                if g_next_city >= data[next_city]['cost']:
+                if g_next_city > data[next_city]['cost']:
                     continue
                 else:
                     try:
                         fringe.remove([data[next_city]['cost'] + h_next_city, next_city])
+                        heapq.heapify(fringe)
                     except:
                         pass
-                    heapq.heapify(fringe)
             data[next_city]['parent'] = curr_city
             data[next_city]['cost'] = g_next_city
             heapq.heappush(fringe, [f_next_city, next_city])
@@ -294,20 +315,27 @@ def solve4(start_city, end_city):
                 else:
                     try:
                         fringe.remove([data[next_city]['cost'] + h_next_city, next_city])
+                        heapq.heapify(fringe)
                     except:
                         pass
-                    heapq.heapify(fringe)
             data[next_city]['parent'] = curr_city
             data[next_city]['cost'] = g_next_city
             heapq.heappush(fringe, [f_next_city, next_city])
     return False
 
-start_city = 'Bloomington,_Indiana' #sys.argv[0]
-end_city = 'Seattle,_Washington' #sys.argv[1]
-routing_algorithm = 'uniform' #sys.argv[2]
-cost_function = 'distance' #sys.argv[3]
+#start_city = 'Bloomington,_Indiana'
+#end_city = 'Indianapolis,_Indiana'
+#routing_algorithm = 'astar'
+#cost_function = 'distance'
 
+start_city = sys.argv[1]
+end_city = sys.argv[2]
+routing_algorithm = sys.argv[3]
+cost_function = sys.argv[4]
+
+import timeit
 data = reading_files()
+s = timeit.default_timer()
 try:
     if routing_algorithm in ['bfs', 'dfs']:
         solution = solve1(start_city, end_city)
@@ -319,7 +347,9 @@ try:
         solution = solve4(start_city, end_city)
     else:
         print("Implement statetour")
+    e = timeit.default_timer()
     print solution[0], round(solution[1], 4), ' '.join(solution[2])
+#    print e-s
 except TypeError:
     print("No route found!")
 
