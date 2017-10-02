@@ -37,8 +37,14 @@ Created on Wed Sep 20 17:31:29 2017
 #  fastest in terms of the amount of computation time required
 #  Depth first search is around 10-20 times faster than astar on an average case, but
 #  the factor totally depends on the start_city and end_city and so its hard to generalize
+#  However, the dfs could run really slow at times when it will have to explore all the cities
 #
-# (3)
+#
+# (3) Uniform cost search requires the least memory on an average case.
+#       Since the astar is performing search algorithm #2 so it revisits the cities and so would the size of the fringe increases
+#       Uniform keeps track of the visited cities so its fringe size is lesser than astar
+#       bfs, dfs fringe size would totally depend on the start_city and end_city
+#       On an average case through several experiments, uniform cost requires the least memory by 2-5 times than astar
 #
 #
 # (4) The heuristic function calculates the great circle distance between the
@@ -54,10 +60,12 @@ Created on Wed Sep 20 17:31:29 2017
 #
 # The heuristic which calculates the great circle distance should ideally be consistent
 # However, Due to the anomalies in the dataset(missing lat lon values, anomalous distance values and many more)
-# the heuristic in this case is guaranteed to be admissable, but cannot say about consistent because of so many anomalies in the dataset
-# If the heuristic returns 0 then it won't be consistent
+# the heuristic in this case is not even guaranteed to be admissable all the time, but it is the closest to admissability we could get
+# We cannot say about consistent because of so many anomalies in the dataset, also in this case if the heuristic returns 0 then it won't be consistent
 #
-# The heuristic can be imporved by doing
+# The heuristic can be improved by maybe multiplying it with some heuristic factor to make it guaranteed to be admissable
+# but by doing some experiments, the factor was coming out to be around 0.05 to make it guranteed to be admissable
+# this factor is way small and would not add much value to our using the heuristic
 #==============================================================================
 
 
@@ -112,7 +120,7 @@ def reading_files():
         if seg[0] == seg[1]:
             continue
         # Updating missing speed values by a constant speed_limit
-        # or by their highway speeds
+        # or by looking at their highway speeds
         if len(seg) != 5:
             if seg[-1] in s:
                 seg = seg[:3] + [s[seg[-1]]] + seg[3:]
@@ -141,7 +149,7 @@ def reading_files():
     f_road.close()
     return data
 
-# Returns the nearest city and its distance from the current city which has latitude and longitude
+# Returns the nearest city(which has lat, lon) and its distance from the current city
 def dist_nearest_city(city):
     nearest_cities = successors(city)
     d = []
@@ -154,7 +162,6 @@ def dist_nearest_city(city):
 def lat_lon(city):
     return data[city]['latitude'], data[city]['longitude']
 
-#
 def great_circle_distance(from_city, to_city):
     from math import radians, sin, cos, acos
     slat, slon = map(radians, lat_lon(from_city))
@@ -343,7 +350,7 @@ def solve4(start_city, end_city):
     return False
 
 #start_city = 'Bloomington,_Indiana'
-#end_city = 'Indianapolis,_Indiana'
+#end_city = 'Seattle,_Washington'
 #routing_algorithm = 'uniform'
 #cost_function = 'distance'
 
