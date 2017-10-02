@@ -1,5 +1,6 @@
 ===============================================================================
  The following road segment didn't have speed
+ {'NS_106' : 62, 'NB_11': 50, 'NB_8': 50, 'NS_103': 50}
 
  ['Antigonish,_Nova_Scotia', 'New_Glasgow,_Nova_Scotia', '64', 'NS_104']
  ['Antigonish,_Nova_Scotia', 'Tracadie,_Nova_Scotia', '30', 'NS_104']
