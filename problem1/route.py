@@ -225,6 +225,8 @@ def successors(city):
     return data[city]['to_city'].keys()
 
 def solve1(start_city, end_city):
+    if start_city == end_city:
+        return path(end_city)
     # For switching between bfs dfs, use pop(0) for BFS, pop() for DFS
     i = {'bfs': 0, 'dfs': -1}[routing_algorithm]
     # fringe is a list of cities which can explored further
