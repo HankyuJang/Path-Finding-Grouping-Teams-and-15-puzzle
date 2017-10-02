@@ -27,8 +27,9 @@
 #
 # Start state would be all teams are in group of 1 person (working alone).
 # If there are 100 students in a class, there would be 100 individual groups.
-# The successor function merges two groups, so there would be 99 remaining groups.
-# For each step the algorithm branches, and then calculates the cost of each child node. If the cost is greater than it's parent, it doesn't push that child node in the fringe. As the algorithm proceed, it will keep branching until the child node is guaranteed to give a lower cost than its parent.
+# The successor function merges two groups, so there would be 99 groups. It then returns all the possible groups paired with its cost.
+# For each step the algorithm branches to the child with minimum value.
+# This procedure is continues until there are no more child, or the cost of the child with the minimum value gets larger than its parent.
 #
 # (3) Any problem I faced, assumptions, simplifications, design decisions
 #
@@ -72,7 +73,7 @@ def successor(s):
             # Sort the team
             [team.sort() for team in new_group]
             new_group.sort()
-            successor_list.append(new_group)
+            successor_list.append([new_group, calculate_cost(new_group)])
     return successor_list
             
 def calculate_cost(s):
@@ -99,50 +100,25 @@ def calculate_cost(s):
 
     return comp1 + comp2 + comp3 + comp4
 
+def find_best_state(fringe):
+    f_list = [s[1] for s in fringe]
+    return f_list.index(min(f_list))
+
 def solve(initial_state):
-    global groups_tracking
-    fringe = [initial_state]
-    s_best = initial_state
-    min_cost = calculate_cost(initial_state)
-    while len(fringe) > 0:
-        s = fringe.pop()
-        s_cost = calculate_cost(s)
-        for s_prime in successor(s):
-            # Check if successor is already considered previously
-            if s_prime in groups_tracking:
-                continue
-            else:
-                groups_tracking += [s_prime]
-            
-            s_prime_cost = calculate_cost(s_prime)
-            if s_prime_cost < s_cost:
-                fringe.append(s_prime)
-            if s_prime_cost < min_cost:
-                min_cost = s_prime_cost
-                s_best = s_prime
-    return s_best, min_cost
+    s = initial_state
+    s_cost = calculate_cost(s)
 
-# def solve_bf(initial_state):
-    # global groups_tracking
-    # fringe = [initial_state]
-    # s_best = initial_state
-    # min_cost = calculate_cost(initial_state)
-    # while len(fringe) > 0:
-        # s = fringe.pop()
-        # s_cost = calculate_cost(s)
-        # for s_prime in successor(s):
-            # # Check if successor is already considered previously
-            # if s_prime in groups_tracking:
-                # continue
-            # else:
-                # groups_tracking += [s_prime]
+    while True:
+        s_prime_list = successor(s)
+        # Break, if there are no more children.
+        if s_prime_list == []:
+            break
+        s_prime, s_prime_cost = s_prime_list.pop(find_best_state(s_prime_list))
+        if s_prime_cost > s_cost:
+            break
+        s = s_prime
 
-            # s_prime_cost = calculate_cost(s_prime)
-            # fringe.append(s_prime)
-            # if s_prime_cost < min_cost:
-                # min_cost = s_prime_cost
-                # s_best = s_prime
-    # return s_best, min_cost
+    return s_prime, s_prime_cost
 
 def printable_result(s):
     return "\n".join([" ".join([member for member in team]) for team in s])
@@ -154,20 +130,9 @@ n = int(sys.argv[4])
 student_dict = readfile(filename)
 
 S0 = initial_state(student_dict)
-S0.sort()
-groups_tracking = [S0]
+# S0.sort()
 
 s_best, min_cost = solve(S0)
 print printable_result(s_best)
 print min_cost
-
-# print("-"*40)
-# print("Now checking using the bruteforce way\n")
-# s_best, min_cost = solve_bf(S0)
-# print printable_result(s_best)
-# print min_cost
-
-# Checking the calculate_cost function with the example in the problem2
-# s_goal = [['djcran', 'chen464'], ['kapadia', 'zehzhang', 'fan6'], ['steflee']]
-# print calculate_cost(s_goal)
 
